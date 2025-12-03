@@ -14,7 +14,7 @@ type Options = {
 export function createSwipeDetector(
   element: HTMLElement,
   callback: SwipeCallback,
-  options?: Options,
+  options?: Options
 ) {
   let startX = 0;
   let startY = 0;
@@ -56,7 +56,6 @@ export function createSwipeDetector(
 
     const direction: SwipeDirection =
       absX > absY ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
-
     callback({ direction, distance });
   };
 
