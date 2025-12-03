@@ -1,0 +1,6 @@
+{
+  "id": "counter-game",
+  "name": "Counter Game",
+  "entry": "/games/counter-game/index.js",
+  "thumb": "/games/counter-game/thumb.jpg"
+}
