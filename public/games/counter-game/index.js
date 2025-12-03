@@ -1,6 +1,11 @@
 let count = 0;
 let btn = null;
 
+export const gameConfig = {
+  handlesSwipe: false,
+  swipeDirections: [],
+};
+
 export function start(container) {
   count = 0;
 

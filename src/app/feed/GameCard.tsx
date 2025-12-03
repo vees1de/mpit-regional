@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import {
+  createSwipeDetector,
+  type SwipeDirection,
+} from "@/lib/swipeDetector";
 
 export type FeedItem = {
   id: string;
@@ -9,37 +13,56 @@ export type FeedItem = {
 };
 
 type GameModule = {
-  start: (container: HTMLElement) => void;
+  start?: (container: HTMLElement) => void;
   stop?: (container: HTMLElement) => void;
+  onSwipe?: (direction: SwipeDirection) => void;
+  gameConfig?: {
+    handlesSwipe?: boolean;
+    swipeDirections?: SwipeDirection[];
+  };
 };
 
-export default function GameCard({ item }: { item: FeedItem }) {
+type Props = {
+  item: FeedItem;
+  onFeedSwipe: (direction: SwipeDirection, distance: number) => void;
+};
+
+export default function GameCard({ item, onFeedSwipe }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
+  const gameModuleRef = useRef<GameModule | null>(null);
+  const isActiveRef = useRef(false);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return undefined;
 
     let isRunning = false;
-    let gameModule: GameModule | null = null;
+    let destroyed = false;
 
     const observer = new IntersectionObserver(
-      async (entries) => {
+      (entries) => {
         const entry = entries[0];
         if (!entry) return;
 
         const visible = entry.isIntersecting;
+        isActiveRef.current = visible;
 
         if (visible && !isRunning) {
           isRunning = true;
-          // Load game from /public at runtime; ignore bundler resolution.
-          gameModule = (await import(
-            /* webpackIgnore: true */ item.entry
-          )) as GameModule;
-          gameModule.start(el);
+          (async () => {
+            const module = (await import(
+              /* webpackIgnore: true */ item.entry
+            )) as GameModule;
+            if (destroyed) return;
+            gameModuleRef.current = module;
+            module.start?.(el);
+          })().catch(() => {
+            isRunning = false;
+          });
         } else if (!visible && isRunning) {
           isRunning = false;
-          gameModule?.stop?.(el);
+          gameModuleRef.current?.stop?.(el);
+          gameModuleRef.current = null;
         }
       },
       { threshold: 0.5 },
@@ -48,10 +71,41 @@ export default function GameCard({ item }: { item: FeedItem }) {
     observer.observe(el);
 
     return () => {
+      destroyed = true;
       observer.disconnect();
-      gameModule?.stop?.(el);
+      gameModuleRef.current?.stop?.(el);
+      gameModuleRef.current = null;
+      isActiveRef.current = false;
     };
   }, [item.entry]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+
+    const cleanup = createSwipeDetector(
+      el,
+      ({ direction, distance }) => {
+        const game = gameModuleRef.current;
+        const gameHandlesSwipe = Boolean(game?.gameConfig?.handlesSwipe);
+
+        if (isActiveRef.current && gameHandlesSwipe) {
+          game?.onSwipe?.(direction);
+          return;
+        }
+
+        if (distance < 40) return;
+        onFeedSwipe(direction, distance);
+      },
+      {
+        shouldBlockScroll: () =>
+          isActiveRef.current &&
+          Boolean(gameModuleRef.current?.gameConfig?.handlesSwipe),
+      },
+    );
+
+    return cleanup;
+  }, [onFeedSwipe]);
 
   return (
     <div
@@ -67,6 +121,7 @@ export default function GameCard({ item }: { item: FeedItem }) {
         flexDirection: "column",
         fontFamily: "sans-serif",
         borderBottom: "2px solid #000",
+        touchAction: "none",
       }}
     >
       <div style={{ marginBottom: "20px", opacity: 0.7 }}>{item.name}</div>

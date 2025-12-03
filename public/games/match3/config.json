@@ -1,0 +1,6 @@
+{
+  "id": "match3",
+  "name": "Match-3",
+  "entry": "/games/match3/index.js",
+  "thumb": "/games/match3/thumb.jpg"
+}
