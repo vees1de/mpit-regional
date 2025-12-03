@@ -9,6 +9,8 @@ export function start(container, options = {}) {
   stop(container);
 
   const settings = { ...gameSettings, ...(options.settings ?? {}) };
+  const onScoreChange =
+    typeof options.onScoreChange === "function" ? options.onScoreChange : null;
   const state = createInitialState(settings);
 
   const canvas = document.createElement("canvas");
@@ -53,6 +55,13 @@ export function start(container, options = {}) {
     settings,
     frameId: null,
     lastTouch: null,
+    lastScore: state.score,
+    onScoreChange,
+    animState: {
+      start: performance.now(),
+      duration: 420,
+      delayPerRow: 35,
+    },
     listeners: { onResize: null, onTouchStart: null },
   };
 
@@ -72,10 +81,28 @@ export function start(container, options = {}) {
 
   // Initial render to compute view
   renderer.render();
+  if (runtime.onScoreChange) {
+    runtime.onScoreChange(state.score);
+  }
 
-  const loop = () => {
+  const loop = (timestamp) => {
     if (!runtime) return;
-    renderer.render();
+    renderer.render(timestamp, undefined, runtime.animState);
+    if (
+      runtime.animState &&
+      timestamp - runtime.animState.start >
+        (runtime.animState.duration ?? 420) +
+          settings.boardSize * (runtime.animState.delayPerRow ?? 35)
+    ) {
+      runtime.animState = null;
+    }
+    if (
+      runtime.onScoreChange &&
+      runtime.state.score !== runtime.lastScore
+    ) {
+      runtime.lastScore = runtime.state.score;
+      runtime.onScoreChange(runtime.state.score);
+    }
     runtime.frameId = requestAnimationFrame(loop);
   };
   runtime.frameId = requestAnimationFrame(loop);
@@ -107,7 +134,14 @@ export function onSwipe(direction) {
   if (!runtime.state.view) {
     runtime.renderer.render();
   }
-  handleSwipe(runtime, direction);
+  const changed = handleSwipe(runtime, direction);
+  if (changed) {
+    runtime.animState = {
+      start: performance.now(),
+      duration: 420,
+      delayPerRow: 35,
+    };
+  }
 }
 
 export function getScore() {

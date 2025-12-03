@@ -33,3 +33,4 @@ stop(containerEl);
 - `game.js` — start/stop/onSwipe/getScore
 - `config.js` — параметры и `gameConfig`
 - `engine/` — core/logic/render/input/utils
+- Seed: `start(container, { settings: { seed: 123 } })` для детерминированного поля.

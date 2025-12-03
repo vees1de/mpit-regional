@@ -1,8 +1,13 @@
 import { directions, inBounds } from "./utils.js";
 import { attemptSwap } from "./logic.js";
 
-export function recordTouch(runtime, touchEvent) {
-  const touch = touchEvent.touches?.[0] ?? touchEvent.changedTouches?.[0];
+export function recordTouch(runtime, event) {
+  const touch =
+    event.touches?.[0] ??
+    event.changedTouches?.[0] ??
+    (event.pointerType === "touch" || event.pointerType === "pen"
+      ? event
+      : null);
   if (!touch) return;
   runtime.lastTouch = {
     clientX: touch.clientX,

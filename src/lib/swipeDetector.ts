@@ -19,6 +19,10 @@ export function createSwipeDetector(
   let startX = 0;
   let startY = 0;
   let tracking = false;
+  let activePointerId: number | null = null;
+
+  const supportsPointer =
+    typeof window !== "undefined" && "PointerEvent" in window;
 
   const handleStart = (event: TouchEvent) => {
     const touch = event.touches[0];
@@ -56,13 +60,69 @@ export function createSwipeDetector(
     callback({ direction, distance });
   };
 
-  element.addEventListener("touchstart", handleStart);
-  element.addEventListener("touchmove", handleMove, { passive: false });
-  element.addEventListener("touchend", handleEnd);
+  const handlePointerStart = (event: PointerEvent) => {
+    if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+    activePointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    tracking = true;
+  };
+
+  const handlePointerMove = (event: PointerEvent) => {
+    if (event.pointerId !== activePointerId) return;
+    if (options?.shouldBlockScroll?.()) {
+      event.preventDefault();
+    }
+  };
+
+  const handlePointerEnd = (event: PointerEvent) => {
+    if (event.pointerId !== activePointerId) return;
+    activePointerId = null;
+    if (!tracking) return;
+    tracking = false;
+
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+    const distance = Math.max(absX, absY);
+
+    const direction: SwipeDirection =
+      absX > absY ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+
+    callback({ direction, distance });
+  };
+
+  if (supportsPointer) {
+    element.addEventListener("pointerdown", handlePointerStart, {
+      passive: true,
+    });
+    element.addEventListener("pointermove", handlePointerMove, {
+      passive: false,
+    });
+    element.addEventListener("pointerup", handlePointerEnd, { passive: true });
+    element.addEventListener("pointercancel", handlePointerEnd, {
+      passive: true,
+    });
+  } else {
+    element.addEventListener("touchstart", handleStart, { passive: true });
+    element.addEventListener("touchmove", handleMove, { passive: false });
+    element.addEventListener("touchend", handleEnd, { passive: true });
+    element.addEventListener("touchcancel", handleEnd, { passive: true });
+  }
 
   return () => {
-    element.removeEventListener("touchstart", handleStart);
-    element.removeEventListener("touchmove", handleMove);
-    element.removeEventListener("touchend", handleEnd);
+    if (supportsPointer) {
+      element.removeEventListener("pointerdown", handlePointerStart);
+      element.removeEventListener("pointermove", handlePointerMove);
+      element.removeEventListener("pointerup", handlePointerEnd);
+      element.removeEventListener("pointercancel", handlePointerEnd);
+    } else {
+      element.removeEventListener("touchstart", handleStart);
+      element.removeEventListener("touchmove", handleMove);
+      element.removeEventListener("touchend", handleEnd);
+      element.removeEventListener("touchcancel", handleEnd);
+    }
   };
 }
