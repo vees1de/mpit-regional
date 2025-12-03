@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import ServiceWorkerRegister from "./register-sw";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -12,10 +11,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-export const viewport = {
-  themeColor: "#000", // ✔ корректно
-};
 
 // export const metadata: Metadata = {
 //   title: "Game Feed",
@@ -41,9 +36,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ru">
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <ServiceWorkerRegister />
         {children}
       </body>
     </html>
