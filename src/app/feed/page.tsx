@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { SwipeDirection } from "@/lib/swipeDetector";
 import GameCard, { type FeedItem } from "./GameCard";
-import { type SwipeDirection } from "@/lib/swipeDetector";
 
 export default function FeedPage() {
   const [items, setItems] = useState<FeedItem[]>([]);

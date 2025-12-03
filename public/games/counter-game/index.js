@@ -23,7 +23,7 @@ export function start(container) {
 
   btn.onclick = () => {
     count++;
-    btn.innerText = "Счёт: " + count;
+    btn.innerText = `Счёт: ${count}`;
   };
 
   container.appendChild(btn);

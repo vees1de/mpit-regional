@@ -9,15 +9,24 @@ const PALETTE = [
 ];
 
 const VERT_SHADER = `
-attribute vec2 aPosition;
+attribute vec3 aPosition;
 attribute vec3 aColor;
 attribute vec2 aUV;
+
+uniform mat4 uMVP;
+uniform mat3 uNormal;
+uniform vec3 uLightDir;
+
 varying vec3 vColor;
 varying vec2 vUV;
+varying float vLight;
+
 void main() {
+  vec3 worldNormal = normalize(uNormal * vec3(0.0, 0.0, 1.0));
+  vLight = clamp(dot(worldNormal, normalize(uLightDir)), 0.2, 1.0);
   vColor = aColor;
   vUV = aUV;
-  gl_Position = vec4(aPosition, 0.0, 1.0);
+  gl_Position = uMVP * vec4(aPosition, 1.0);
 }
 `;
 
@@ -25,13 +34,18 @@ const FRAG_SHADER = `
 precision mediump float;
 varying vec3 vColor;
 varying vec2 vUV;
+varying float vLight;
 void main() {
   float radius = 0.14;
   float edge = 0.04;
   float dist = min(min(vUV.x, 1.0 - vUV.x), min(vUV.y, 1.0 - vUV.y));
   float alpha = smoothstep(0.0, edge, dist - radius);
   if (alpha <= 0.0) discard;
-  gl_FragColor = vec4(vColor, alpha);
+
+  float rim = smoothstep(0.0, 0.6, vUV.x * (1.0 - vUV.x) * vUV.y * (1.0 - vUV.y) * 4.0);
+  vec3 base = vColor * (0.55 + 0.45 * vLight);
+  vec3 finalColor = base + rim * 0.08;
+  gl_FragColor = vec4(finalColor, alpha);
 }
 `;
 
@@ -91,11 +105,16 @@ export function createRenderer(canvas, state, settings, hudElement) {
   const colorAttrib = gl.getAttribLocation(program, "aColor");
   const uvAttrib = gl.getAttribLocation(program, "aUV");
 
+  const uMVP = gl.getUniformLocation(program, "uMVP");
+  const uNormal = gl.getUniformLocation(program, "uNormal");
+  const uLightDir = gl.getUniformLocation(program, "uLightDir");
+
   const positionBuffer = gl.createBuffer();
   const colorBuffer = gl.createBuffer();
   const uvBuffer = gl.createBuffer();
 
   gl.useProgram(program);
+  gl.enable(gl.DEPTH_TEST);
 
   return {
     render(now = performance.now(), viewOverride, animState) {
@@ -113,10 +132,16 @@ export function createRenderer(canvas, state, settings, hudElement) {
       const geometry = buildGeometry(state.board, view, animState, now);
       if (!geometry.vertexCount) return view;
 
+      const { mvp, normal } = buildMatrices(view, now);
+
+      gl.uniformMatrix4fv(uMVP, false, mvp);
+      gl.uniformMatrix3fv(uNormal, false, normal);
+      gl.uniform3fv(uLightDir, [0.35, 0.65, 1.0]);
+
       gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, geometry.positions, gl.DYNAMIC_DRAW);
       gl.enableVertexAttribArray(positionAttrib);
-      gl.vertexAttribPointer(positionAttrib, 2, gl.FLOAT, false, 0, 0);
+      gl.vertexAttribPointer(positionAttrib, 3, gl.FLOAT, false, 0, 0);
 
       gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, geometry.colors, gl.DYNAMIC_DRAW);
@@ -183,18 +208,12 @@ function buildGeometry(board, view, animState, now) {
 
       // Two triangles per cell
       positions.push(
-        x0,
-        y0,
-        x1,
-        y0,
-        x0,
-        y1,
-        x0,
-        y1,
-        x1,
-        y0,
-        x1,
-        y1,
+        x0, y0, 0,
+        x1, y0, 0,
+        x0, y1, 0,
+        x0, y1, 0,
+        x1, y0, 0,
+        x1, y1, 0,
       );
 
       for (let i = 0; i < 6; i++) {
@@ -223,6 +242,111 @@ function buildGeometry(board, view, animState, now) {
     positions: new Float32Array(positions),
     colors: new Float32Array(colors),
     uvs: new Float32Array(uvs),
-    vertexCount: positions.length / 2,
+    vertexCount: positions.length / 3,
   };
+}
+
+function buildMatrices(view, now) {
+  const aspect = view.width / view.height;
+  const fov = (50 * Math.PI) / 180;
+  const near = 0.1;
+  const far = 100;
+  const perspectiveMat = perspective(fov, aspect, near, far);
+
+  const tilt =
+    0.3 +
+    0.08 * Math.sin((now / 1000) * 0.7) +
+    0.06 * Math.sin((now / 1000) * 1.3);
+  const rotX = rotationX(-0.9);
+  const rotY = rotationY(tilt);
+  const model = multiplyMat4(rotY, rotX);
+  const viewMat = translation(0, -0.1, -3.2);
+  const mv = multiplyMat4(viewMat, model);
+  const mvp = multiplyMat4(perspectiveMat, mv);
+
+  const normalMat = mat3FromMat4(mv);
+  return { mvp, normal: normalMat };
+}
+
+function perspective(fov, aspect, near, far) {
+  const f = 1.0 / Math.tan(fov / 2);
+  const rangeInv = 1 / (near - far);
+
+  return new Float32Array([
+    f / aspect,
+    0,
+    0,
+    0,
+    0,
+    f,
+    0,
+    0,
+    0,
+    0,
+    (near + far) * rangeInv,
+    -1,
+    0,
+    0,
+    near * far * rangeInv * 2,
+    0,
+  ]);
+}
+
+function translation(x, y, z) {
+  return new Float32Array([
+    1, 0, 0, 0, //
+    0, 1, 0, 0, //
+    0, 0, 1, 0, //
+    x, y, z, 1,
+  ]);
+}
+
+function rotationX(rad) {
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return new Float32Array([
+    1, 0, 0, 0, //
+    0, c, s, 0, //
+    0, -s, c, 0, //
+    0, 0, 0, 1,
+  ]);
+}
+
+function rotationY(rad) {
+  const c = Math.cos(rad);
+  const s = Math.sin(rad);
+  return new Float32Array([
+    c, 0, -s, 0, //
+    0, 1, 0, 0, //
+    s, 0, c, 0, //
+    0, 0, 0, 1,
+  ]);
+}
+
+function multiplyMat4(a, b) {
+  const out = new Float32Array(16);
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 4; col++) {
+      out[col + row * 4] =
+        a[row * 4] * b[col] +
+        a[row * 4 + 1] * b[col + 4] +
+        a[row * 4 + 2] * b[col + 8] +
+        a[row * 4 + 3] * b[col + 12];
+    }
+  }
+  return out;
+}
+
+function mat3FromMat4(m) {
+  return new Float32Array([
+    m[0],
+    m[1],
+    m[2],
+    m[4],
+    m[5],
+    m[6],
+    m[8],
+    m[9],
+    m[10],
+  ]);
 }

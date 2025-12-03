@@ -114,7 +114,7 @@ export function start(container, options = {}) {
   runtime.frameId = requestAnimationFrame(loop);
 }
 
-export function stop(container) {
+export function stop(_container) {
   if (!runtime) return;
 
   if (runtime.frameId !== null) {
