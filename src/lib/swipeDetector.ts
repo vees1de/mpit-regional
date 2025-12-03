@@ -94,6 +94,12 @@ export function createSwipeDetector(
     callback({ direction, distance });
   };
 
+  // Attach both pointer and touch to survive iOS WebView quirks.
+  element.addEventListener("touchstart", handleStart, { passive: true });
+  element.addEventListener("touchmove", handleMove, { passive: false });
+  element.addEventListener("touchend", handleEnd, { passive: true });
+  element.addEventListener("touchcancel", handleEnd, { passive: true });
+
   if (supportsPointer) {
     element.addEventListener("pointerdown", handlePointerStart, {
       passive: true,
@@ -105,24 +111,18 @@ export function createSwipeDetector(
     element.addEventListener("pointercancel", handlePointerEnd, {
       passive: true,
     });
-  } else {
-    element.addEventListener("touchstart", handleStart, { passive: true });
-    element.addEventListener("touchmove", handleMove, { passive: false });
-    element.addEventListener("touchend", handleEnd, { passive: true });
-    element.addEventListener("touchcancel", handleEnd, { passive: true });
   }
 
   return () => {
+    element.removeEventListener("touchstart", handleStart);
+    element.removeEventListener("touchmove", handleMove);
+    element.removeEventListener("touchend", handleEnd);
+    element.removeEventListener("touchcancel", handleEnd);
     if (supportsPointer) {
       element.removeEventListener("pointerdown", handlePointerStart);
       element.removeEventListener("pointermove", handlePointerMove);
       element.removeEventListener("pointerup", handlePointerEnd);
       element.removeEventListener("pointercancel", handlePointerEnd);
-    } else {
-      element.removeEventListener("touchstart", handleStart);
-      element.removeEventListener("touchmove", handleMove);
-      element.removeEventListener("touchend", handleEnd);
-      element.removeEventListener("touchcancel", handleEnd);
     }
   };
 }
