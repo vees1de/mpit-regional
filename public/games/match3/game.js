@@ -8,7 +8,14 @@ const PALETTE = [
   [0.74, 0.54, 0.92],
 ];
 
+const LOG_PREFIX = "[match3]";
+
 let runtime = null;
+
+function logMove(event, payload = {}) {
+  // Lightweight logger for swipe and match actions.
+  console.log(LOG_PREFIX, event, payload);
+}
 
 export function start(container, options = {}) {
   stop(container);
@@ -116,12 +123,31 @@ export function stop(container) {
 }
 
 export function onSwipe(direction) {
-  if (!runtime || runtime.busy) return;
+  if (!runtime) return;
+  if (runtime.busy) {
+    logMove("swipe ignored (busy)", { direction });
+    return;
+  }
   const delta = directionVectors[direction];
-  if (!delta) return;
+  if (!delta) {
+    logMove("swipe ignored (unknown direction)", { direction });
+    return;
+  }
 
   const origin = runtime.lastTouch ? pickCell(runtime, runtime.lastTouch) : null;
-  if (!origin) return;
+  if (!origin) {
+    logMove("swipe ignored (no origin cell)", {
+      direction,
+      lastTouch: runtime.lastTouch,
+    });
+    return;
+  }
+
+  logMove("swipe", {
+    direction,
+    origin,
+    target: { x: origin.x + delta.x, y: origin.y + delta.y },
+  });
 
   runtime.busy = true;
   void handleSwap(runtime, origin, delta).finally(() => {
@@ -135,8 +161,14 @@ export function getScore() {
 
 async function handleSwap(rt, origin, delta) {
   const target = { x: origin.x + delta.x, y: origin.y + delta.y };
-  if (!inBounds(target.x, target.y, rt.state.board.length)) return;
-  if (rt.state.moving) return;
+  if (!inBounds(target.x, target.y, rt.state.board.length)) {
+    logMove("swap cancelled (out of bounds)", { origin, target });
+    return;
+  }
+  if (rt.state.moving) {
+    logMove("swap cancelled (state moving)", { origin, target });
+    return;
+  }
 
   rt.state.moving = true;
 
@@ -151,10 +183,16 @@ async function handleSwap(rt, origin, delta) {
       swapCells(board, origin, target);
       await playAnimation(rt, createSwapAnimation(origin, target));
       rt.state.combo = 0;
+      logMove("swap reverted (no matches)", { origin, target });
       return;
     }
 
     rt.state.chain = 0;
+    logMove("matches found", {
+      origin,
+      target,
+      matches: matches.length,
+    });
     await resolveMatches(rt, matches);
   } finally {
     rt.state.moving = false;
@@ -171,6 +209,13 @@ async function resolveMatches(rt, matches) {
   state.score += Math.floor(baseScore * multiplier);
   state.combo = state.chain ?? 0;
   state.chain = (state.chain ?? 0) + 1;
+  logMove("score updated", {
+    matches: matches.length,
+    baseScore,
+    multiplier,
+    totalScore: state.score,
+    chain: state.chain,
+  });
 
   removeMatches(state.board, matches);
   const moves = collapseBoardWithMoves(state.board, settings.gemTypes, state.rng);
@@ -180,9 +225,11 @@ async function resolveMatches(rt, matches) {
 
   matches = findMatches(state.board);
   if (matches.length) {
+    logMove("cascade continue", { matches: matches.length });
     await resolveMatches(rt, matches);
   } else {
     state.chain = 0;
+    logMove("cascade finished", { score: state.score });
   }
 }
 
@@ -366,6 +413,7 @@ function recordTouch(rt, event) {
     (event.pointerType === "touch" || event.pointerType === "pen" ? event : null);
   if (!point) return;
   rt.lastTouch = { clientX: point.clientX, clientY: point.clientY };
+  logMove("touch", rt.lastTouch);
 }
 
 function pickCell(rt, point) {
@@ -373,8 +421,10 @@ function pickCell(rt, point) {
   if (!view) return null;
 
   const rect = rt.canvas.getBoundingClientRect();
-  const localX = point.clientX - rect.left - view.offsetX;
-  const localY = point.clientY - rect.top - view.offsetY;
+  const scaleX = rect.width ? rt.canvas.width / rect.width : 1;
+  const scaleY = rect.height ? rt.canvas.height / rect.height : 1;
+  const localX = (point.clientX - rect.left) * scaleX - view.offsetX;
+  const localY = (point.clientY - rect.top) * scaleY - view.offsetY;
 
   const xOnBoard = localX / view.cellSize;
   const yOnBoard = localY / view.cellSize;
