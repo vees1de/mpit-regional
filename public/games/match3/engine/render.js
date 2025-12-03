@@ -165,7 +165,7 @@ function buildGeometry(board, view, animState, now) {
               ),
             )
           : 1;
-      const ease = 1 - Math.pow(1 - t, 3);
+      const ease = 1 - (1 - t) ** 3;
       const offset = (1 - ease) * dropDistance;
 
       const px0 = view.offsetX + x * view.cellSize + padding;
@@ -215,7 +215,7 @@ function buildGeometry(board, view, animState, now) {
         0,
         1,
         1,
-      }
+      );
     }
   }
 

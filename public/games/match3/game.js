@@ -62,7 +62,7 @@ export function start(container, options = {}) {
       duration: 420,
       delayPerRow: 35,
     },
-    listeners: { onResize: null, onTouchStart: null },
+    listeners: { onResize: null, onTouchStart: null, onPointerDown: null },
   };
 
   const onResize = () => {
@@ -73,11 +73,17 @@ export function start(container, options = {}) {
     recordTouch(runtime, event);
   };
 
+  const onPointerDown = (event) => {
+    recordTouch(runtime, event);
+  };
+
   runtime.listeners.onResize = onResize;
   runtime.listeners.onTouchStart = onTouchStart;
+  runtime.listeners.onPointerDown = onPointerDown;
 
   window.addEventListener("resize", onResize);
   wrapper.addEventListener("touchstart", onTouchStart, { passive: true });
+  wrapper.addEventListener("pointerdown", onPointerDown, { passive: true });
 
   // Initial render to compute view
   renderer.render();
@@ -117,6 +123,10 @@ export function stop(container) {
 
   window.removeEventListener("resize", runtime.listeners.onResize);
   runtime.wrapper.removeEventListener("touchstart", runtime.listeners.onTouchStart);
+  runtime.wrapper.removeEventListener(
+    "pointerdown",
+    runtime.listeners.onPointerDown,
+  );
 
   const host = runtime.container;
   if (host?.contains(runtime.wrapper)) {
