@@ -14,7 +14,7 @@ type Options = {
 export function createSwipeDetector(
   element: HTMLElement,
   callback: SwipeCallback,
-  options?: Options
+  options?: Options,
 ) {
   let startX = 0;
   let startY = 0;
