@@ -39,12 +39,12 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
         Math.max(
           ref.current?.clientHeight ?? 0,
           typeof window !== "undefined" ? window.innerHeight : 0,
-          120
+          120,
         );
 
       onFeedSwipe(direction, resolvedDistance);
     },
-    [onFeedSwipe]
+    [onFeedSwipe],
   );
 
   useEffect(() => {
@@ -69,7 +69,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
           (async () => {
             const entryUrl = new URL(
               item.entry,
-              typeof window !== "undefined" ? window.location.origin : ""
+              typeof window !== "undefined" ? window.location.origin : "",
             ).toString();
             const module = (await import(
               /* webpackIgnore: true */ entryUrl
@@ -88,7 +88,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
           setHandlesGameSwipe(false);
         }
       },
-      { threshold: 0.5 }
+      { threshold: 0.5 },
     );
 
     observer.observe(el);
@@ -117,7 +117,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       },
       {
         shouldBlockScroll: () => true,
-      }
+      },
     );
   }, [handlesGameSwipe]);
 
@@ -133,7 +133,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       },
       {
         shouldBlockScroll: () => true,
-      }
+      },
     );
   }, [triggerFeedScroll]);
 

@@ -134,7 +134,9 @@ export function onSwipe(direction) {
     return;
   }
 
-  const origin = runtime.lastTouch ? pickCell(runtime, runtime.lastTouch) : null;
+  const origin = runtime.lastTouch
+    ? pickCell(runtime, runtime.lastTouch)
+    : null;
   if (!origin) {
     logMove("swipe ignored (no origin cell)", {
       direction,
@@ -178,7 +180,7 @@ async function handleSwap(rt, origin, delta) {
     swapCells(board, origin, target);
     await playAnimation(rt, createSwapAnimation(origin, target));
 
-    let matches = findMatches(board);
+    const matches = findMatches(board);
     if (!matches.length) {
       swapCells(board, origin, target);
       await playAnimation(rt, createSwapAnimation(origin, target));
@@ -218,7 +220,11 @@ async function resolveMatches(rt, matches) {
   });
 
   removeMatches(state.board, matches);
-  const moves = collapseBoardWithMoves(state.board, settings.gemTypes, state.rng);
+  const moves = collapseBoardWithMoves(
+    state.board,
+    settings.gemTypes,
+    state.rng,
+  );
   if (moves.length) {
     await playAnimation(rt, createFallAnimation(moves));
   }
@@ -344,7 +350,14 @@ function drawBoard(ctx, board, view, animations, now) {
 
       ctx.globalAlpha = 0.25 * transform.alpha;
       ctx.fillStyle = "#ffffff";
-      drawRoundedRect(ctx, size * 0.16, size * 0.14, size * 0.7, size * 0.25, size * 0.14);
+      drawRoundedRect(
+        ctx,
+        size * 0.16,
+        size * 0.14,
+        size * 0.7,
+        size * 0.25,
+        size * 0.14,
+      );
 
       ctx.restore();
     }
@@ -410,7 +423,9 @@ function recordTouch(rt, event) {
   const point =
     event.touches?.[0] ??
     event.changedTouches?.[0] ??
-    (event.pointerType === "touch" || event.pointerType === "pen" ? event : null);
+    (event.pointerType === "touch" || event.pointerType === "pen"
+      ? event
+      : null);
   if (!point) return;
   rt.lastTouch = { clientX: point.clientX, clientY: point.clientY };
   logMove("touch", rt.lastTouch);
@@ -471,7 +486,9 @@ function createInitialState(settings) {
 }
 
 function createBoard(size, gemTypes, rng) {
-  const board = Array.from({ length: size }, () => Array.from({ length: size }, () => -1));
+  const board = Array.from({ length: size }, () =>
+    Array.from({ length: size }, () => -1),
+  );
 
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
@@ -492,19 +509,11 @@ function pickSafeGem(board, x, y, gemTypes, rng) {
 }
 
 function formsMatch(board, x, y, value) {
-  if (
-    x >= 2 &&
-    board[y][x - 1] === value &&
-    board[y][x - 2] === value
-  ) {
+  if (x >= 2 && board[y][x - 1] === value && board[y][x - 2] === value) {
     return true;
   }
 
-  if (
-    y >= 2 &&
-    board[y - 1][x] === value &&
-    board[y - 2][x] === value
-  ) {
+  if (y >= 2 && board[y - 1][x] === value && board[y - 2][x] === value) {
     return true;
   }
 
