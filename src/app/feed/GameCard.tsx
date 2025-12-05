@@ -1,7 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  Icon28CrownOutline,
+  Icon28GameOutline,
+  Icon28Hand,
+  Icon28HomeOutline,
+  Icon28LikeOutline,
+  Icon28MenuOutline,
+  Icon28MessageOutline,
+  Icon28MoreVertical,
+  Icon28MuteOutline,
+  Icon28SearchOutline,
+  Icon28ShareOutline,
+  Icon28ThumbsDownOutline,
+  Icon28VolumeOutline,
+} from "@vkontakte/icons";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 import { createSwipeDetector, type SwipeDirection } from "@/lib/swipeDetector";
+import styles from "./GameCard.module.scss";
 
 export type FeedItem = {
   id: string;
@@ -24,6 +46,50 @@ type Props = {
   onFeedSwipe: (direction: SwipeDirection, distance: number) => void;
 };
 
+type LeaderboardUser = {
+  id: string;
+  name: string;
+  isTop?: boolean;
+};
+
+type StyleVars = CSSProperties & {
+  "--footer-height"?: string;
+};
+const FOOTER_HEIGHT = 82;
+
+const footerIcons = [
+  { label: "Дом", Icon: Icon28HomeOutline, active: false },
+  { label: "Поиск", Icon: Icon28SearchOutline, active: false },
+  {
+    label: "Сообщения",
+    Icon: Icon28MessageOutline,
+    active: false,
+    badge: 1,
+  },
+  { label: "Клипы", Icon: Icon28Hand, active: false },
+  { label: "Игры", Icon: Icon28GameOutline, active: true },
+  { label: "Меню", Icon: Icon28MenuOutline, active: false },
+];
+
+const actionButtons = [
+  { label: "Лайк", Icon: Icon28LikeOutline },
+  { label: "Дизлайк", Icon: Icon28ThumbsDownOutline },
+  { label: "Поделиться", Icon: Icon28ShareOutline },
+  { label: "Лидеры", Icon: Icon28CrownOutline },
+  { label: "Меню", Icon: Icon28MoreVertical },
+];
+
+const leaderboardMock: LeaderboardUser[] = [
+  { id: "u1", name: "Алексей", isTop: true },
+  { id: "u2", name: "Марина" },
+  { id: "u3", name: "Илья" },
+];
+
+const palette = ["#6fcf97", "#2d9cdb", "#bb6bd9", "#f2994a", "#f25292"];
+
+const getAvatarColor = (id: string, index: number) =>
+  palette[(id.length + index) % palette.length];
+
 export default function GameCard({ item, onFeedSwipe }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const gameSurfaceRef = useRef<HTMLDivElement | null>(null);
@@ -31,6 +97,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
   const gameModuleRef = useRef<GameModule | null>(null);
   const isActiveRef = useRef(false);
   const [handlesGameSwipe, setHandlesGameSwipe] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
 
   const triggerFeedScroll = useCallback(
     (direction: "up" | "down", distance?: number) => {
@@ -39,12 +106,12 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
         Math.max(
           ref.current?.clientHeight ?? 0,
           typeof window !== "undefined" ? window.innerHeight : 0,
-          120,
+          120
         );
 
       onFeedSwipe(direction, resolvedDistance);
     },
-    [onFeedSwipe],
+    [onFeedSwipe]
   );
 
   useEffect(() => {
@@ -69,7 +136,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
           (async () => {
             const entryUrl = new URL(
               item.entry,
-              typeof window !== "undefined" ? window.location.origin : "",
+              typeof window !== "undefined" ? window.location.origin : ""
             ).toString();
             const module = (await import(
               /* webpackIgnore: true */ entryUrl
@@ -88,7 +155,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
           setHandlesGameSwipe(false);
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.5 }
     );
 
     observer.observe(el);
@@ -117,7 +184,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       },
       {
         shouldBlockScroll: () => true,
-      },
+      }
     );
   }, [handlesGameSwipe]);
 
@@ -133,124 +200,108 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       },
       {
         shouldBlockScroll: () => true,
-      },
+      }
     );
   }, [triggerFeedScroll]);
 
+  const styleVars: StyleVars = {
+    "--footer-height": `${FOOTER_HEIGHT}px`,
+  };
+
   return (
-    <div
-      ref={ref}
-      style={{
-        width: "100%",
-        height: "100dvh",
-        display: "flex",
-        justifyContent: "flex-start",
-        alignItems: "center",
-        background: "#111",
-        color: "white",
-        flexDirection: "column",
-        fontFamily: "sans-serif",
-        borderBottom: "2px solid #000",
-        position: "relative",
-        overflow: "hidden",
-        paddingBottom: "140px",
-        boxSizing: "border-box",
-      }}
-    >
-      <div
-        style={{
-          marginBottom: "12px",
-          opacity: 0.85,
-          letterSpacing: "0.04em",
-          fontWeight: 600,
-          textTransform: "uppercase",
-          paddingTop: "12px",
-        }}
-      >
-        {item.name}
-      </div>
+    <div ref={ref} className={styles.container} style={styleVars}>
+      <div ref={gameSurfaceRef} className={styles.surface} />
 
-      <div
-        ref={gameSurfaceRef}
-        style={{
-          width: "100%",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      />
-
-      <div
-        ref={swipeZoneRef}
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: "140px",
-          background:
-            "linear-gradient(180deg, rgba(17,17,17,0.4) 0%, rgba(17,17,17,0.95) 45%, rgba(17,17,17,1) 100%)",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          gap: "10px",
-          padding: "12px 16px 18px",
-          touchAction: "none",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <div
-          style={{
-            fontSize: "12px",
-            opacity: 0.8,
-            textAlign: "center",
-            letterSpacing: "0.03em",
-          }}
-        >
-          Свайпай снизу или жми кнопки для перехода
+      <div className={styles.infoOverlay}>
+        <div className={styles.leaderboard}>
+          {leaderboardMock.map((user, index) => (
+            <div
+              key={user.id}
+              className={styles.leaderAvatar}
+              style={{ background: getAvatarColor(user.id, index) }}
+            >
+              {user.name.slice(0, 1)}
+              {user.isTop ? (
+                <div className={styles.leaderCrown}>
+                  <Icon28CrownOutline
+                    width={14}
+                    height={14}
+                    className={styles.crownIcon}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ))}
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-            gap: "12px",
-          }}
-        >
+        <div className={styles.gameCard}>
+          <div className={styles.gameAvatar}>{item.name.slice(0, 1)}</div>
+          <div className={styles.gameMeta}>
+            <div className={styles.gameTitle}>{item.name}</div>
+            <div className={styles.audioRow}>
+              <button
+                onClick={() => setIsMuted((prev) => !prev)}
+                aria-label={isMuted ? "Включить звук" : "Выключить звук"}
+                className={styles.audioButton}
+              >
+                {isMuted ? (
+                  <Icon28MuteOutline width={20} height={20} />
+                ) : (
+                  <Icon28VolumeOutline width={20} height={20} />
+                )}
+              </button>
+              <div className={styles.audioLabel}>
+                {isMuted ? "Без звука" : "Со звуком"}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={styles.actions}>
+        {actionButtons.map(({ Icon, label }, index) => (
           <button
+            key={`${label}-${index}`}
             type="button"
-            onClick={() => triggerFeedScroll("up")}
-            style={{
-              background: "#1f8efa",
-              color: "#fff",
-              border: "none",
-              borderRadius: "10px",
-              padding: "12px 14px",
-              fontSize: "14px",
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-            }}
+            aria-label={label}
+            className={styles.actionButton}
           >
-            Вверх
+            <Icon width={26} height={26} />
           </button>
-          <button
-            type="button"
-            onClick={() => triggerFeedScroll("down")}
-            style={{
-              background: "#0bcf83",
-              color: "#0b1c0f",
-              border: "none",
-              borderRadius: "10px",
-              padding: "12px 14px",
-              fontSize: "14px",
-              fontWeight: 700,
-              letterSpacing: "0.02em",
-            }}
-          >
-            Вниз
-          </button>
+        ))}
+      </div>
+
+      <div ref={swipeZoneRef} className={styles.footer}>
+        <div className={styles.navGrid}>
+          {footerIcons.map(({ Icon, label, active, badge }) => (
+            <button
+              key={label}
+              type="button"
+              aria-label={label}
+              className={styles.navButton}
+            >
+              <div
+                className={`${styles.navIconWrap} ${
+                  active ? styles.navIconWrapActive : ""
+                }`}
+              >
+                <Icon
+                  width={26}
+                  height={26}
+                  className={`${styles.navIcon} ${
+                    active ? styles.navIconActive : ""
+                  }`}
+                />
+                {badge ? (
+                  <span className={styles.navBadge}>{badge}</span>
+                ) : null}
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className={styles.pillRow}>
+          <div className={styles.pill} />
         </div>
       </div>
     </div>

@@ -9,19 +9,24 @@ export async function GET() {
         entry: "/games/match3/index.js",
       },
       {
-        id: "counter-game",
-        name: "Counter",
-        entry: "/games/counter-game/index.js",
-      },
-      {
         id: "mini-2048",
         name: "Mini 2048",
         entry: "/games/mini-2048/index.js",
       },
       {
-        id: "counter-game-clone",
-        name: "Counter Clone 2",
+        id: "counter-game",
+        name: "Counter",
         entry: "/games/counter-game/index.js",
+      },
+      {
+        id: "match4",
+        name: "Match-4",
+        entry: "/games/match3/index.js",
+      },
+      {
+        id: "mini-2047",
+        name: "Mini 2047",
+        entry: "/games/mini-2048/index.js",
       },
     ],
   });
