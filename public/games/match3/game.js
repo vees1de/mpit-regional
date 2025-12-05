@@ -23,11 +23,26 @@ export function start(container, options = {}) {
   const settings = { ...gameSettings, ...(options.settings ?? {}) };
   const state = createInitialState(settings);
 
+  const prevStyle = {
+    background: container.style.background,
+    display: container.style.display,
+    alignItems: container.style.alignItems,
+    justifyContent: container.style.justifyContent,
+  };
+
+  container.style.background = "#0a0d12";
+  container.style.display = "flex";
+  container.style.alignItems = "center";
+  container.style.justifyContent = "center";
+
   const wrapper = document.createElement("div");
   wrapper.style.position = "relative";
-  wrapper.style.width = "100%";
-  wrapper.style.height = "100%";
-  wrapper.style.background = "#0a0d12";
+  wrapper.style.width = "80%";
+  wrapper.style.height = "80%";
+  wrapper.style.maxWidth = "470px";
+  wrapper.style.maxHeight = "670px";
+  wrapper.style.margin = "0 auto";
+
   wrapper.style.overflow = "hidden";
 
   const canvas = document.createElement("canvas");
@@ -81,6 +96,7 @@ export function start(container, options = {}) {
     busy: false,
     resizeHandler: null,
     pointerHandler: null,
+    prevStyle,
   };
 
   const resize = () => resizeCanvas(runtime);
@@ -115,6 +131,12 @@ export function stop(container) {
   runtime.canvas.removeEventListener("pointerdown", runtime.pointerHandler);
 
   const host = container ?? runtime.container;
+  if (host) {
+    host.style.background = runtime.prevStyle?.background ?? "";
+    host.style.display = runtime.prevStyle?.display ?? "";
+    host.style.alignItems = runtime.prevStyle?.alignItems ?? "";
+    host.style.justifyContent = runtime.prevStyle?.justifyContent ?? "";
+  }
   if (host && runtime.wrapper && host.contains(runtime.wrapper)) {
     host.removeChild(runtime.wrapper);
   }
@@ -223,7 +245,7 @@ async function resolveMatches(rt, matches) {
   const moves = collapseBoardWithMoves(
     state.board,
     settings.gemTypes,
-    state.rng,
+    state.rng
   );
   if (moves.length) {
     await playAnimation(rt, createFallAnimation(moves));
@@ -356,7 +378,7 @@ function drawBoard(ctx, board, view, animations, now) {
         size * 0.14,
         size * 0.7,
         size * 0.25,
-        size * 0.14,
+        size * 0.14
       );
 
       ctx.restore();
@@ -487,7 +509,7 @@ function createInitialState(settings) {
 
 function createBoard(size, gemTypes, rng) {
   const board = Array.from({ length: size }, () =>
-    Array.from({ length: size }, () => -1),
+    Array.from({ length: size }, () => -1)
   );
 
   for (let y = 0; y < size; y++) {
@@ -625,7 +647,7 @@ function scoreForMatch(length, scoreValues) {
 function scoreMatches(matches, scoreValues) {
   return matches.reduce(
     (sum, match) => sum + scoreForMatch(match.length, scoreValues),
-    0,
+    0
   );
 }
 

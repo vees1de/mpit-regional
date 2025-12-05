@@ -15,9 +15,9 @@ import {
   Icon28SearchOutline,
   Icon28ShareOutline,
 } from "@vkontakte/icons";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import styles from "@/app/page.module.css";
+import feedStyles from "@/app/feed/GameCard.module.scss";
 
 type NavItem = {
   label: string;
@@ -140,6 +140,7 @@ const posts: Post[] = [
 
 export function HomeMockPage() {
   const pathname = usePathname() || "/";
+  const router = useRouter();
 
   return (
     <div className={styles.page}>
@@ -220,29 +221,44 @@ export function HomeMockPage() {
         </section>
       </div>
 
-      <nav className={styles.footerNav}>
-        {footerNav.map(({ href, label, Icon, badge }) => {
-          const isActive =
-            href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={`${styles.navItem} ${
-                isActive ? styles.navItemActive : ""
-              }`}
-            >
-              <div className={styles.navIconWrap}>
-                <Icon width={32} height={32} />
-                {badge ? (
-                  <span className={styles.navBadge}>{badge}</span>
-                ) : null}
-              </div>
-              <span className={styles.navLabel}>{label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <div
+        className={feedStyles.footer}
+        style={{ position: "fixed", left: 0, right: 0, bottom: 0 }}
+      >
+        <div className={feedStyles.navGrid}>
+          {footerNav.map(({ href, label, Icon, badge }) => {
+            const isActive =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+            return (
+              <button
+                key={href}
+                type="button"
+                aria-label={label}
+                className={feedStyles.navButton}
+                onClick={() => router.push(href)}
+              >
+                <div
+                  className={`${feedStyles.navIconWrap} ${
+                    isActive ? feedStyles.navIconWrapActive : ""
+                  }`}
+                >
+                  <Icon
+                    width={32}
+                    height={32}
+                    className={`${feedStyles.navIcon} ${
+                      isActive ? feedStyles.navIconActive : ""
+                    }`}
+                  />
+                  {badge ? (
+                    <span className={feedStyles.navBadge}>{badge}</span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

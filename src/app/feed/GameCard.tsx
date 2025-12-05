@@ -24,20 +24,22 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ComponentType,
 } from "react";
 import { createSwipeDetector, type SwipeDirection } from "@/lib/swipeDetector";
 import styles from "./GameCard.module.scss";
 
-type IconComponent = (props: {
+type IconComponent = ComponentType<{
   width?: number;
   height?: number;
   className?: string;
-}) => JSX.Element;
+}>;
 
 type ActionButton = {
   label: string;
   Icon: IconComponent;
   variant?: "framed";
+  action?: "up" | "down";
 };
 
 export type FeedItem = {
@@ -94,8 +96,18 @@ const footerIcons: FooterIcon[] = [
 ];
 
 const actionButtons: ActionButton[] = [
-  { label: "Вверх", Icon: Icon28ChevronUpOutline, variant: "framed" },
-  { label: "Вниз", Icon: Icon28ChevronDownOutline, variant: "framed" },
+  {
+    label: "Вверх",
+    Icon: Icon28ChevronUpOutline,
+    variant: "framed",
+    action: "down",
+  },
+  {
+    label: "Вниз",
+    Icon: Icon28ChevronDownOutline,
+    variant: "framed",
+    action: "up",
+  },
   { label: "Лайк", Icon: Icon28LikeOutline },
   { label: "Дизлайк", Icon: Icon28ThumbsDownOutline },
   { label: "Поделиться", Icon: Icon28ShareOutline },
@@ -139,6 +151,18 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       onFeedSwipe(direction, resolvedDistance);
     },
     [onFeedSwipe]
+  );
+
+  const handleActionPress = useCallback(
+    (action?: "up" | "down") => {
+      if (!action) return;
+      if (action === "up") {
+        triggerFeedScroll("up");
+      } else if (action === "down") {
+        triggerFeedScroll("down");
+      }
+    },
+    [triggerFeedScroll]
   );
 
   useEffect(() => {
@@ -310,7 +334,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       </div>
 
       <div className={styles.actions}>
-        {actionButtons.map(({ Icon, label, variant }, index) => (
+        {actionButtons.map(({ Icon, label, variant, action }, index) => (
           <button
             key={`${label}-${index}`}
             type="button"
@@ -318,6 +342,9 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
             className={`${styles.actionButton} ${
               variant === "framed" ? styles.actionButtonFramed : ""
             }`}
+            onPointerDown={(event) => event.stopPropagation()}
+            onTouchStart={(event) => event.stopPropagation()}
+            onClick={() => handleActionPress(action)}
           >
             <Icon width={26} height={26} />
           </button>
@@ -357,10 +384,6 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
               </button>
             );
           })}
-        </div>
-
-        <div className={styles.pillRow}>
-          <div className={styles.pill} />
         </div>
       </div>
     </div>
