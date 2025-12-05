@@ -9,6 +9,7 @@ type SwipeCallback = (payload: SwipeEvent) => void;
 
 type Options = {
   shouldBlockScroll?: () => boolean;
+  shouldHandleStart?: (event: TouchEvent | PointerEvent) => boolean;
 };
 
 export function createSwipeDetector(
@@ -25,6 +26,9 @@ export function createSwipeDetector(
     typeof window !== "undefined" && "PointerEvent" in window;
 
   const handleStart = (event: TouchEvent) => {
+    if (options?.shouldHandleStart && !options.shouldHandleStart(event)) {
+      return;
+    }
     const touch = event.touches[0];
     if (!touch) return;
 
@@ -61,6 +65,9 @@ export function createSwipeDetector(
 
   const handlePointerStart = (event: PointerEvent) => {
     if (event.pointerType !== "touch" && event.pointerType !== "pen") return;
+    if (options?.shouldHandleStart && !options.shouldHandleStart(event)) {
+      return;
+    }
     activePointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;

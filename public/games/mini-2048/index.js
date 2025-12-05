@@ -173,7 +173,7 @@ export function onSwipe(direction) {
 function resetGame() {
   if (!runtime) return;
   const overlay = runtime.wrapper.querySelector(".mini-2048-overlay");
-  if (overlay) overlay.remove();
+  overlay?.remove();
   runtime.grid = createEmptyGrid();
   runtime.score = 0;
   addRandomTile(runtime.grid);
@@ -245,7 +245,7 @@ function showGameOver() {
 
   retry.onclick = () => {
     if (!runtime) return;
-    runtime.wrapper.removeChild(overlay);
+    overlay?.remove();
     resetGame();
   };
 

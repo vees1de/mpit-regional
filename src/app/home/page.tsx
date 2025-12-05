@@ -1,5 +1,5 @@
 import HomeMockPage from "@/components/HomeMockPage";
 
-export default function Page() {
+export default function HomePage() {
   return <HomeMockPage />;
 }

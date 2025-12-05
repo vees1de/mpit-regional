@@ -34,7 +34,7 @@ export default function FeedPage() {
         behavior: "smooth",
       });
     },
-    [],
+    []
   );
 
   return (
@@ -43,7 +43,7 @@ export default function FeedPage() {
       style={{
         scrollSnapType: "y mandatory",
         overflowY: "scroll",
-        height: "100vh",
+        height: "100dvh",
       }}
     >
       {items.map((item, index) => (

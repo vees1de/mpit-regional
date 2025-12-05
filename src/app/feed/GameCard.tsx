@@ -14,7 +14,10 @@ import {
   Icon28ShareOutline,
   Icon28ThumbsDownOutline,
   Icon28VolumeOutline,
+  Icon28ChevronUpOutline,
+  Icon28ChevronDownOutline,
 } from "@vkontakte/icons";
+import { usePathname, useRouter } from "next/navigation";
 import {
   useCallback,
   useEffect,
@@ -24,6 +27,18 @@ import {
 } from "react";
 import { createSwipeDetector, type SwipeDirection } from "@/lib/swipeDetector";
 import styles from "./GameCard.module.scss";
+
+type IconComponent = (props: {
+  width?: number;
+  height?: number;
+  className?: string;
+}) => JSX.Element;
+
+type ActionButton = {
+  label: string;
+  Icon: IconComponent;
+  variant?: "framed";
+};
 
 export type FeedItem = {
   id: string;
@@ -57,21 +72,30 @@ type StyleVars = CSSProperties & {
 };
 const FOOTER_HEIGHT = 82;
 
-const footerIcons = [
-  { label: "Дом", Icon: Icon28HomeOutline, active: false },
-  { label: "Поиск", Icon: Icon28SearchOutline, active: false },
+type FooterIcon = {
+  label: string;
+  Icon: IconComponent;
+  href: string;
+  badge?: number;
+};
+
+const footerIcons: FooterIcon[] = [
+  { label: "Дом", Icon: Icon28HomeOutline, href: "/" },
+  { label: "Поиск", Icon: Icon28SearchOutline, href: "/search" },
   {
     label: "Сообщения",
     Icon: Icon28MessageOutline,
-    active: false,
+    href: "/messages",
     badge: 1,
   },
-  { label: "Клипы", Icon: Icon28Hand, active: false },
-  { label: "Игры", Icon: Icon28GameOutline, active: true },
-  { label: "Меню", Icon: Icon28MenuOutline, active: false },
+  { label: "Клипы", Icon: Icon28Hand, href: "/clips" },
+  { label: "Игры", Icon: Icon28GameOutline, href: "/feed" },
+  { label: "Меню", Icon: Icon28MenuOutline, href: "/menu" },
 ];
 
-const actionButtons = [
+const actionButtons: ActionButton[] = [
+  { label: "Вверх", Icon: Icon28ChevronUpOutline, variant: "framed" },
+  { label: "Вниз", Icon: Icon28ChevronDownOutline, variant: "framed" },
   { label: "Лайк", Icon: Icon28LikeOutline },
   { label: "Дизлайк", Icon: Icon28ThumbsDownOutline },
   { label: "Поделиться", Icon: Icon28ShareOutline },
@@ -94,10 +118,13 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const gameSurfaceRef = useRef<HTMLDivElement | null>(null);
   const swipeZoneRef = useRef<HTMLDivElement | null>(null);
+  const navGridRef = useRef<HTMLDivElement | null>(null);
   const gameModuleRef = useRef<GameModule | null>(null);
   const isActiveRef = useRef(false);
   const [handlesGameSwipe, setHandlesGameSwipe] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const router = useRouter();
+  const pathname = usePathname() || "/";
 
   const triggerFeedScroll = useCallback(
     (direction: "up" | "down", distance?: number) => {
@@ -119,6 +146,21 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
     if (!el) return undefined;
 
     const getSurface = () => gameSurfaceRef.current ?? el;
+
+    const stopGame = () => {
+      const surface = getSurface();
+      try {
+        gameModuleRef.current?.stop?.(surface);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "NotFoundError") {
+          surface?.replaceChildren?.();
+        } else {
+          console.error("[GameCard] stop failed", error);
+        }
+      }
+      gameModuleRef.current = null;
+      setHandlesGameSwipe(false);
+    };
 
     let isRunning = false;
     let destroyed = false;
@@ -150,9 +192,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
           });
         } else if (!visible && isRunning) {
           isRunning = false;
-          gameModuleRef.current?.stop?.(getSurface());
-          gameModuleRef.current = null;
-          setHandlesGameSwipe(false);
+          stopGame();
         }
       },
       { threshold: 0.5 }
@@ -163,9 +203,7 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
     return () => {
       destroyed = true;
       observer.disconnect();
-      gameModuleRef.current?.stop?.(getSurface());
-      gameModuleRef.current = null;
-      setHandlesGameSwipe(false);
+      stopGame();
       isActiveRef.current = false;
     };
   }, [item.entry]);
@@ -188,6 +226,18 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
     );
   }, [handlesGameSwipe]);
 
+  const shouldHandleFooterSwipeStart = useCallback(
+    (event: TouchEvent | PointerEvent) => {
+      const navEl = navGridRef.current;
+      const target = event.target as Node | null;
+      if (navEl && target && navEl.contains(target)) {
+        return false;
+      }
+      return true;
+    },
+    []
+  );
+
   useEffect(() => {
     const swipeZone = swipeZoneRef.current;
     if (!swipeZone) return undefined;
@@ -200,9 +250,10 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       },
       {
         shouldBlockScroll: () => true,
+        shouldHandleStart: shouldHandleFooterSwipeStart,
       }
     );
-  }, [triggerFeedScroll]);
+  }, [shouldHandleFooterSwipeStart, triggerFeedScroll]);
 
   const styleVars: StyleVars = {
     "--footer-height": `${FOOTER_HEIGHT}px`,
@@ -259,12 +310,14 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       </div>
 
       <div className={styles.actions}>
-        {actionButtons.map(({ Icon, label }, index) => (
+        {actionButtons.map(({ Icon, label, variant }, index) => (
           <button
             key={`${label}-${index}`}
             type="button"
             aria-label={label}
-            className={styles.actionButton}
+            className={`${styles.actionButton} ${
+              variant === "framed" ? styles.actionButtonFramed : ""
+            }`}
           >
             <Icon width={26} height={26} />
           </button>
@@ -272,32 +325,38 @@ export default function GameCard({ item, onFeedSwipe }: Props) {
       </div>
 
       <div ref={swipeZoneRef} className={styles.footer}>
-        <div className={styles.navGrid}>
-          {footerIcons.map(({ Icon, label, active, badge }) => (
-            <button
-              key={label}
-              type="button"
-              aria-label={label}
-              className={styles.navButton}
-            >
-              <div
-                className={`${styles.navIconWrap} ${
-                  active ? styles.navIconWrapActive : ""
-                }`}
+        <div className={styles.navGrid} ref={navGridRef}>
+          {footerIcons.map(({ Icon, label, href, badge }) => {
+            const isActive =
+              href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+            return (
+              <button
+                key={label}
+                type="button"
+                aria-label={label}
+                className={styles.navButton}
+                onClick={() => router.push(href)}
               >
-                <Icon
-                  width={26}
-                  height={26}
-                  className={`${styles.navIcon} ${
-                    active ? styles.navIconActive : ""
+                <div
+                  className={`${styles.navIconWrap} ${
+                    isActive ? styles.navIconWrapActive : ""
                   }`}
-                />
-                {badge ? (
-                  <span className={styles.navBadge}>{badge}</span>
-                ) : null}
-              </div>
-            </button>
-          ))}
+                >
+                  <Icon
+                    width={32}
+                    height={32}
+                    className={`${styles.navIcon} ${
+                      isActive ? styles.navIconActive : ""
+                    }`}
+                  />
+                  {badge ? (
+                    <span className={styles.navBadge}>{badge}</span>
+                  ) : null}
+                </div>
+              </button>
+            );
+          })}
         </div>
 
         <div className={styles.pillRow}>
