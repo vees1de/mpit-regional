@@ -1,0 +1,7 @@
+{
+  "id": "knife-spin",
+  "name": "Knife Spin",
+  "engine": "webgl",
+  "entry": "/games/knife-spin/index.js",
+  "thumb": "/games/knife-spin/thumb.jpg"
+}
